@@ -1,0 +1,6 @@
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\bin\Debug\Newtech.dll
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\bin\Debug\Newtech.pdb
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\bin\Debug\Renci.SshNet.dll
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\obj\Debug\Newtech.csprojResolveAssemblyReference.cache
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\obj\Debug\Newtech.dll
+C:\Users\rhys\documents\visual studio 2013\Projects\Testssh\Newtech\obj\Debug\Newtech.pdb

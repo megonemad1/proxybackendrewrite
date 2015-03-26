@@ -1,0 +1,10 @@
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\obj\Debug\ProxyV2.csprojResolveAssemblyReference.cache
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\obj\Debug\ProxyV2.Properties.Resources.resources
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\obj\Debug\ProxyV2.csproj.GenerateResource.Cache
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\bin\Debug\ProxyV2.dll
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\bin\Debug\ProxyV2.pdb
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\bin\Debug\FSM.DotNetSSH.dll
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\obj\Debug\ProxyV2.dll
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\obj\Debug\ProxyV2.pdb
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\bin\Debug\DiffieHellman.dll
+c:\Users\rhys\documents\visual studio 2013\Projects\Testssh\ProxyV2\bin\Debug\Org.Mentalis.Security.dll
