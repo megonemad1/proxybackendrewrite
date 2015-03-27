@@ -41,13 +41,12 @@ namespace Newtech
         void CheckBool()
         {
             if (ssh.IsConnected)
-                this.Proxy_SessionStarted(this, new ProxyInfo(this.ToString()));
+                this.SessionStarted(this, new ProxyInfo(this.ToString()));
             while (ssh.IsConnected)
             {
-                Thread.Sleep(20);
+                Thread.Sleep(2);
             }
-            this.Proxy_SessionTerminated(this, new ProxyInfo(this.ToString()));
-
+            this.SessionTerminated(this, new ProxyInfo(this.ToString()));
 
         }
         /// <summary>
@@ -83,8 +82,8 @@ namespace Newtech
         }
         SshClient setupThis()
         {
-            var S = new SshClient(new ConnectionInfo(this.host,this.Serverport, this.auth["password"].Username,new AuthenticationMethod[]{ auth["password"]}));
-           // ssh = new SshClient(new ConnectionInfo("rhys.rklyne.net", 4243, "rhys", new AuthenticationMethod[] { new PasswordAuthenticationMethod("rhys", "eust0n1c") }));
+            var S = new SshClient(new ConnectionInfo(this.host, this.Serverport, this.auth["password"].Username, new AuthenticationMethod[] { auth["password"] }));
+            // ssh = new SshClient(new ConnectionInfo("rhys.rklyne.net", 4243, "rhys", new AuthenticationMethod[] { new PasswordAuthenticationMethod("rhys", "eust0n1c") }));
             return S;
         }
         /// <summary>
@@ -201,16 +200,17 @@ namespace Newtech
         /// 
         public void Stop()
         {
+            Console.WriteLine("[Runtime]Closing SSH...");
             if (ssh.IsConnected)
             {
                 ssh.Disconnect();
             }
-            
+
             _open = false;
-            Console.WriteLine("[Runtime]Closing SSH...");
+            
             ChangeLanProxySettings(0, (this.OldSettings == null) ? "" : OldSettings);
             Console.WriteLine("[Runtime]Returned LAN Proxy");
-            
+
         }
 
         void startssh()
@@ -218,25 +218,26 @@ namespace Newtech
             ssh = setupThis();
             if (verbose)
                 ssh.HostKeyReceived += (object sender, Renci.SshNet.Common.HostKeyEventArgs e) => { Console.WriteLine(String.Join(" ,", new object[] { e.CanTrust, e.FingerPrint, e.HostKey, e.HostKeyName, e.KeyLength, e.ToString() })); };
-         
-           try { ssh.Connect(); }
-           catch (Exception e) {  errors.Enqueue(e); }
 
-           ssh.ErrorOccurred += (object sender, Renci.SshNet.Common.ExceptionEventArgs e) => { errors.Enqueue(e); };
+            try { ssh.Connect(); }
+            catch (Exception e) { errors.Enqueue(e); }
 
-                       
+            ssh.ErrorOccurred += (object sender, Renci.SshNet.Common.ExceptionEventArgs e) => { errors.Enqueue(e); };
+
+
             Check.Start();
             //if (ssh.IsConnected)
             ssh.AddForwardedPort(new ForwardedPortDynamic("localhost", this.Cientport));
-            foreach (var f in ssh.ForwardedPorts)
-            {
-                if (verbose)
-                    f.RequestReceived += (object sender, Renci.SshNet.Common.PortForwardEventArgs e) => { Console.WriteLine(String.Join(" ", new object[] { e.OriginatorHost, e.OriginatorPort, e.ToString() })); };
-                f.Start();
-                Console.WriteLine("port forwarded: " + f.IsStarted);
-            }
+            if (ssh.IsConnected)
+                foreach (var f in ssh.ForwardedPorts)
+                {
+                    if (verbose)
+                        f.RequestReceived += (object sender, Renci.SshNet.Common.PortForwardEventArgs e) => { Console.WriteLine(String.Join(" ", new object[] { e.OriginatorHost, e.OriginatorPort, e.ToString() })); };
+                    f.Start();
+                    Console.WriteLine("port forwarded: " + f.IsStarted);
+                }
             ssh.KeepAliveInterval = keepalive;
-            
+
         }
 
         void ErrorCatch(object sender, Renci.SshNet.Common.ExceptionEventArgs e, out bool starting)
@@ -285,37 +286,37 @@ namespace Newtech
             return AcountInfo;
         }
     }
-    public class Proxytst
-    {
-        public static SshClient ssh;
-        public static bool con { get { return ssh.IsConnected; } }
-        public static string test(string Pass)
-        {
-            ssh = new SshClient(new ConnectionInfo("rhys.rklyne.net", 4243, "rhys", new AuthenticationMethod[] { new PasswordAuthenticationMethod("rhys", Pass) }));
-            ssh.HostKeyReceived += ssh_HostKeyReceived;
-            ssh.Connect();
+    //public class Proxytst
+    //{
+    //    public static SshClient ssh;
+    //    public static bool con { get { return ssh.IsConnected; } }
+    //    public static string test(string Pass)
+    //    {
+    //        ssh = new SshClient(new ConnectionInfo("rhys.rklyne.net", 4243, "rhys", new AuthenticationMethod[] { new PasswordAuthenticationMethod("rhys", Pass) }));
+    //        ssh.HostKeyReceived += ssh_HostKeyReceived;
+    //        ssh.Connect();
 
-            ssh.AddForwardedPort(new ForwardedPortDynamic("localhost", 8080));
-            foreach (var f in ssh.ForwardedPorts)
-            {
-                f.RequestReceived += f_RequestReceived;
-                f.Start();
-                Console.WriteLine(f.IsStarted);
-            } var a = ssh.CreateCommand("ifconfig");
-            ssh.KeepAliveInterval = new TimeSpan(0, 0, 20);
-            Console.ReadLine();
-            return a.Execute();
-        }
+    //        ssh.AddForwardedPort(new ForwardedPortDynamic("localhost", 8080));
+    //        foreach (var f in ssh.ForwardedPorts)
+    //        {
+    //            f.RequestReceived += f_RequestReceived;
+    //            f.Start();
+    //            Console.WriteLine(f.IsStarted);
+    //        } var a = ssh.CreateCommand("ifconfig");
+    //        ssh.KeepAliveInterval = new TimeSpan(0, 0, 20);
+    //        Console.ReadLine();
+    //        return a.Execute();
+    //    }
 
-        static void ssh_HostKeyReceived(object sender, Renci.SshNet.Common.HostKeyEventArgs e)
-        {
-            Console.WriteLine(String.Join(" ,", new object[] { e.CanTrust, e.FingerPrint, e.HostKey, e.HostKeyName, e.KeyLength, e.ToString() }));
-        }
+    //    static void ssh_HostKeyReceived(object sender, Renci.SshNet.Common.HostKeyEventArgs e)
+    //    {
+    //        Console.WriteLine(String.Join(" ,", new object[] { e.CanTrust, e.FingerPrint, e.HostKey, e.HostKeyName, e.KeyLength, e.ToString() }));
+    //    }
 
-        static void f_RequestReceived(object sender, Renci.SshNet.Common.PortForwardEventArgs e)
-        {
-            Console.WriteLine(String.Join(" ", new object[] { e.OriginatorHost, e.OriginatorPort, e.ToString() }));
-        }
+    //    static void f_RequestReceived(object sender, Renci.SshNet.Common.PortForwardEventArgs e)
+    //    {
+    //        Console.WriteLine(String.Join(" ", new object[] { e.OriginatorHost, e.OriginatorPort, e.ToString() }));
+    //    }
 
-    }
+    //}
 }
