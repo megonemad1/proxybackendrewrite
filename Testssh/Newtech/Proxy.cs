@@ -15,11 +15,11 @@ namespace Newtech
         public event Terminated SessionTerminated;
         object OldSettings;
         string host;
-        uint Serverport;
-        string Cientport;
-        Dictionary<string,AuthenticationMethod> auth;
-        
-        
+        int Serverport;
+        uint Cientport;
+        Dictionary<string, AuthenticationMethod> auth;
+
+
         bool verbose;
         bool auto_store_sshkey;
         bool NoShell;
@@ -36,24 +36,18 @@ namespace Newtech
         public const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
         public const int INTERNET_OPTION_REFRESH = 37;
         static bool settingsReturn, refreshReturn;
-
+        private TimeSpan keepalive;
+        Queue<object> errors;
         void CheckBool()
         {
-            bool prev = ssh.IsConnected;
-            while (true)
+            if (ssh.IsConnected)
+                this.Proxy_SessionStarted(this, new ProxyInfo(this.ToString()));
+            while (ssh.IsConnected)
             {
-                if (prev != ssh.IsConnected)
-                    if (ssh.IsConnected)
-                    {
-                        this.Proxy_SessionStarted(this, new ProxyInfo(this.ToString()));
-                    }
-                    else
-                    {
-                        this.Proxy_SessionTerminated(this, new ProxyInfo(this.ToString()));
-                    }
-                prev = ssh.IsConnected;
                 Thread.Sleep(20);
             }
+            this.Proxy_SessionTerminated(this, new ProxyInfo(this.ToString()));
+
 
         }
         /// <summary>
@@ -75,30 +69,41 @@ namespace Newtech
         {
             host = "";
             Serverport = 22;
-            Cientport = "8080";           
-            auth = new Dictionary<string,AuthenticationMethod>();
+            Cientport = 8080;
+            auth = new Dictionary<string, AuthenticationMethod>();
             closed = true;
             verbose = false;
             NoShell = false;
             auto_store_sshkey = false;
             Check = new Thread(CheckBool);
-            Check.Start();
             this.SessionTerminated += Proxy_SessionTerminated;
             this.SessionStarted += Proxy_SessionStarted;
+            keepalive = new TimeSpan(0, 0, 20);
+            errors = new Queue<object>();
         }
         SshClient setupThis()
         {
-            var S = new SshClient(new ConnectionInfo(this.host,this.auth["password"].Username,auth.Values.ToArray()));
+            var S = new SshClient(new ConnectionInfo(this.host,this.Serverport, this.auth["password"].Username,new AuthenticationMethod[]{ auth["password"]}));
+           // ssh = new SshClient(new ConnectionInfo("rhys.rklyne.net", 4243, "rhys", new AuthenticationMethod[] { new PasswordAuthenticationMethod("rhys", "eust0n1c") }));
             return S;
         }
         /// <summary>
-        /// Hides The Shell
+        /// sets the proxy to auto store ssh keys, currently redundant
         /// </summary>
-        /// <param name="h">whether the proxy shell should be hidden</param>
+        /// <param name="h">proxy to auto store ssh keys</param>
         /// <returns>Amended object</returns>
         public Proxy AutoStoreSshkey(bool h)
         {
             auto_store_sshkey = h; return this;
+        }
+        /// <summary>
+        /// sets duration of the heart beat
+        /// </summary>
+        /// <param name="h">duration</param>
+        /// <returns>Amended object</returns>
+        public Proxy KeepAlive(TimeSpan h)
+        {
+            keepalive = h; return this;
         }
         /// <summary>
         /// Hides The Shell
@@ -135,7 +140,7 @@ namespace Newtech
         /// <returns>Amended object</returns>
         public Proxy setCientport(string h)
         {
-            Cientport = h;
+            Cientport = Convert.ToUInt32(h);
             return this;
         }
         /// <summary>
@@ -145,16 +150,16 @@ namespace Newtech
         /// <returns>Amended object</returns>
         public Proxy setServerport(string h)
         {
-            Serverport = Convert.ToUInt32(h);
+            Serverport = Convert.ToInt32(h);
             return this;
         }
-        
+
         /// <summary>
         /// sets the ssh username & password
         /// </summary>
         /// <param name="h">password</param>
         /// <returns>Amended object</returns>
-        public Proxy setlogin(string username,string password)
+        public Proxy setlogin(string username, string password)
         {
 
             auth["password"] = new PasswordAuthenticationMethod(username, password);
@@ -184,33 +189,64 @@ namespace Newtech
         public void Start()
         {
 
-
+            Console.WriteLine("[Runtime]StartingSsh...");
+            startssh();
+            closed = false;
+            Console.WriteLine("[Runtime]Changing LAN Proxy...");
+            ChangeLanProxySettings(1, String.Format("socks=LOCALHOST:{0}", Cientport));
         }
         /// <summary>
         /// stops ssh and reverts the lan proxy settings (note this Wont Halt to wait for changes)
         /// </summary>
+        /// 
         public void Stop()
         {
-            try
+            if (ssh.IsConnected)
             {
-                if (Open)
-                    ssh.Disconnect();
+                ssh.Disconnect();
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("[Runtime]" + e.Message);
-            }
-
+            
             _open = false;
             Console.WriteLine("[Runtime]Closing SSH...");
             ChangeLanProxySettings(0, (this.OldSettings == null) ? "" : OldSettings);
             Console.WriteLine("[Runtime]Returned LAN Proxy");
-            SessionTerminated(this, new ProxyInfo(String.Format("Host: {0}, Server: {1}, {2}, Number of auths: {3}", host, Serverport, this.Cientport,auth.Keys.Count)));
+            
+        }
 
+        void startssh()
+        {
+            ssh = setupThis();
+            if (verbose)
+                ssh.HostKeyReceived += (object sender, Renci.SshNet.Common.HostKeyEventArgs e) => { Console.WriteLine(String.Join(" ,", new object[] { e.CanTrust, e.FingerPrint, e.HostKey, e.HostKeyName, e.KeyLength, e.ToString() })); };
+         
+           try { ssh.Connect(); }
+           catch (Exception e) {  errors.Enqueue(e); }
+
+           ssh.ErrorOccurred += (object sender, Renci.SshNet.Common.ExceptionEventArgs e) => { errors.Enqueue(e); };
+
+                       
+            Check.Start();
+            //if (ssh.IsConnected)
+            ssh.AddForwardedPort(new ForwardedPortDynamic("localhost", this.Cientport));
+            foreach (var f in ssh.ForwardedPorts)
+            {
+                if (verbose)
+                    f.RequestReceived += (object sender, Renci.SshNet.Common.PortForwardEventArgs e) => { Console.WriteLine(String.Join(" ", new object[] { e.OriginatorHost, e.OriginatorPort, e.ToString() })); };
+                f.Start();
+                Console.WriteLine("port forwarded: " + f.IsStarted);
+            }
+            ssh.KeepAliveInterval = keepalive;
+            
+        }
+
+        void ErrorCatch(object sender, Renci.SshNet.Common.ExceptionEventArgs e, out bool starting)
+        {
+            errors.Enqueue(e);
+            starting = false;
         }
         public override string ToString()
         {
-            return String.Format("Host: {0}, Server: {1}, {2}, Number of auths: {3}", host, Serverport, this.Cientport,auth.Keys.Count);
+            return String.Format("Host: {0}, Server: {1}, {2}, Number of auths: {3}", host, Serverport, this.Cientport, auth.Keys.Count);
         }
         /// <summary>
         /// stops ssh and reverts the lan proxy settings (note this will halt untill the proxy and settings have reverted)
@@ -218,13 +254,13 @@ namespace Newtech
         public void StopAndWait()
         {
             Stop();
-            while (!closed) ;
+            while (!closed) { Thread.Sleep(20); }
         }
 
 
         void Proxy_SessionStarted(object source, ProxyInfo e)
         {
-            Console.WriteLine("[Runtime]Starting SSH...");
+            Console.WriteLine("[Runtime]Started SSH...");
             _open = true;
         }
 
@@ -233,10 +269,7 @@ namespace Newtech
             Console.WriteLine("[Runtime]Closed SSH...");
             closed = true;
         }
-        void Ssh_Exited(object sender, EventArgs e)
-        {
-            Stop();
-        }
+
     }
     public delegate void Started(object source, ProxyInfo e);
     public delegate void Terminated(object source, ProxyInfo e);

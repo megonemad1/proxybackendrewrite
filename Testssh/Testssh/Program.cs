@@ -10,13 +10,25 @@ namespace Testssh
     {
         static void Main(string[] args)
         {
-            Console.WriteLine(Proxy.test(Console.ReadLine()));
-            int i = 0;
-            while (true)
-            {
-                
-            }
-            //Console.ReadLine();
+            Proxy P = new Proxy().setServerport("4243").setCientport("8080").sethost("rhys.rklyne.net").setlogin("rhys", Console.ReadLine());
+            P.SessionStarted += P_SessionStarted;
+            P.SessionTerminated += P_SessionTerminated;
+            P.Start();
+            Console.WriteLine("enter to close");
+            Console.ReadLine();
+            P.Stop();
+            Console.ReadLine();
+
+        }
+
+        static void P_SessionTerminated(object source, ProxyInfo e)
+        {
+            Console.WriteLine("Term");
+        }
+
+        static void P_SessionStarted(object source, ProxyInfo e)
+        {
+            Console.WriteLine("start");
         }
     }
 }
